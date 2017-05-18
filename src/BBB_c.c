@@ -238,6 +238,3 @@ void setValue(int value)
 	//write to file
 }
 
-
-
-
