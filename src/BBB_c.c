@@ -9,22 +9,21 @@
 char DIRECTION_OUT[]="out";
 char DIRECTION_IN[]="in";
 
-//gpio functions prototypes
-void exportGPIO(int GPIONum);
-void unexportGPIO(int GPIONum);
-void setGPIODirection(char * direction);
-void setValue(int value);
-int readGPIO(char * buffer,char * gpioPath, char * gpioName, char * gpioProp);
+char * readGPIO(char * gpioPath, char * gpioName, char * gpioProp);
 int writeGPIO(char * buffer, char * gpioPath, char * gpioName, char * gpioProp);
 int toggleGPIO(char * internalGPIONum, char * gpioPath, int state);
 
+char bufferData[10]={'0'};
+char * ptrBufferData = bufferData;
 
 int main(void)
 {
-	char * bufferData=(char *)malloc(10*sizeof(char));
+	//char * bufferData=(char *)malloc(10*sizeof(char));
 
 
-	char optionChar,choice;//for main and sub-menu
+	char optionChar;//for main and sub-menu
+	int choice;
+	char * value;//for storing readGPIO return values
 
 	printf("\n##  GPIO manipulation through Sysfs in C [ROOT ACCESS NEEDED] ##\n\n");
 	printf("\nWARNING : Refer to your device GPIO headers before using this!! ##\n\n");
@@ -48,34 +47,36 @@ int main(void)
 			case '1':
 				printf("Exporting GPIO %s ",GPIO_P9_12_DIR);
 
-				strcpy(bufferData,"60");
-				if(toggleGPIO(bufferData,SYSFS_GPIOPATH,1)==0)
+				ptrBufferData="60";
+				if(toggleGPIO(ptrBufferData,SYSFS_GPIOPATH,1)==0)
 					printf(" %s exported \n", GPIO_P9_12_DIR );
 
 				break;
 			case '2':
 				printf("UnExporting GPIO %s",GPIO_P9_12_DIR);
 
-				strcpy(bufferData,"60");
-				if(toggleGPIO(bufferData,SYSFS_GPIOPATH,0)==0)
+				ptrBufferData="60";
+				if(toggleGPIO(ptrBufferData,SYSFS_GPIOPATH,0)==0)
 					printf(" %s unexported \n", GPIO_P9_12_DIR);
 
 				break;
 			case '3':
 				printf("Reading GPIO DIRECTION...... \n");
 
-				memset(bufferData,'\0',10);
-				if(readGPIO(bufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_DIRECTION)!=-1)
-					printf("%s : [DIRECTION] = %s \n",GPIO_P9_12_DIR,  bufferData);
-
+				if( (value = readGPIO(SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_DIRECTION))!=NULL)
+				{
+					printf("%s [DIRECTION] = %s \n",GPIO_P9_12_DIR, value);
+					free(value);
+				}
 				break;
 			case '4':
 				printf("Reading GPIO VALUE........... \n");
 
-				strcpy(bufferData,"0\0");//reset
-				if(readGPIO(bufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_VALUE)!=-1)
-					printf("%s : [VALUE] = %s \n", GPIO_P9_12_DIR, bufferData);
-
+				if((value=readGPIO(SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_VALUE))!=NULL)
+				{
+					printf("%s [VALUE] = %s \n",GPIO_P9_12_DIR, value);
+					free(value);
+				}
 				break;
 			case '5':
 				printf("Writing GPIO DIRECTION........\n");
@@ -87,8 +88,8 @@ int main(void)
 				if(choice==1)
 				{
 					//snprintf(bufferData,2,"%s",DIRECTION_IN);
-					bufferData=DIRECTION_IN;
-					if(writeGPIO(bufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_DIRECTION)!=-1)
+					ptrBufferData=DIRECTION_IN;
+					if(writeGPIO(ptrBufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_DIRECTION)!=-1)
 					{
 						printf(" DIRECTION changed for %s\n to IN",GPIO_P9_12_DIR);
 					}
@@ -97,8 +98,8 @@ int main(void)
 				if(choice==2)
 				{
 					//snprintf(bufferData,3,DIRECTION_OUT);
-					bufferData=DIRECTION_OUT;
-					if(writeGPIO(bufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_DIRECTION)!=-1)
+					ptrBufferData=DIRECTION_OUT;
+					if(writeGPIO(ptrBufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_DIRECTION)!=-1)
 					{
 						printf(" DIRECTION changed for %s\n to OUT",GPIO_P9_12_DIR);
 					}
@@ -118,8 +119,8 @@ int main(void)
 
 				if(choice==1)
 				{
-					bufferData="1";
-					if(writeGPIO(bufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_VALUE)!=-1)
+					ptrBufferData="1";
+					if(writeGPIO(ptrBufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_VALUE)!=-1)
 					{
 						printf(" VALUE changed for %s\n to 1", GPIO_P9_12_DIR);
 					}
@@ -127,8 +128,8 @@ int main(void)
 				else
 				if(choice==2)
 				{
-					bufferData="0";
-					if(writeGPIO(bufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_VALUE)!=-1)
+					ptrBufferData="0";
+					if(writeGPIO(ptrBufferData, SYSFS_GPIOPATH, GPIO_P9_12_DIR, GPIO_ATTRIB_VALUE)!=-1)
 					{
 						printf(" VALUE changed for %s\n to 0", GPIO_P9_12_DIR);
 					}
@@ -148,39 +149,6 @@ int main(void)
 
 	}//while
 
-/*
-	//char gpioValue, gpioDirection;
-	printf("*\n Reading %s ... \n", GPIO_P9_12);
-
-	if(readGPIO(buffer, SYSFS_GPIOPATH, GPIO_P9_12, GPIO_DIRECTION)!=-1)
-	{
-		if(strcmp(buffer,"in")==0)
-			printf("%s : [DIRECTION] = %s \n",GPIO_P9_12,  buffer);
-		else
-		if(strcmp(buffer,"out")==0)
-			printf("%s : [DIRECTION] = %s \n",GPIO_P9_12,  buffer);
-
-	}
-
-	printf("*\n Setting DIRECTION to OUT..\n");
-
-	buffer = direction_out;
-	if(writeGPIO(buffer, SYSFS_GPIOPATH, GPIO_P9_12, GPIO_DIRECTION)!=-1)
-	{
-		printf(" DIRECTION changed for %s\n",GPIO_P9_12);
-	}
-
-	printf("*\n Setting VALUE to OUT..\n");
-
-	buffer = '1';
-	if(writeGPIO(buffer, SYSFS_GPIOPATH, GPIO_P9_12, GPIO_VALUE)!=-1)
-	{
-		printf(" VALUE changed for %s\n",GPIO_P9_12);
-	}
-
-
-
-	*/
 	return 0;
 }
 
@@ -254,12 +222,11 @@ int writeGPIO(char * buffer, char * gpioPath, char * gpioName, char * gpioProp)
 }
 
 
-int readGPIO(char * buffer, char * gpioPath, char * gpioName, char * gpioProp)
+char * readGPIO(char * gpioPath, char * gpioName, char * gpioProp)
 {
 
 	char fullPath[80];
-	int count=0;
-	char tempChar;
+	char * value=(char *)malloc(10*sizeof(char *));
 
 	FILE *fp;
 
@@ -267,44 +234,30 @@ int readGPIO(char * buffer, char * gpioPath, char * gpioName, char * gpioProp)
 	if((fp=fopen(fullPath,"r+"))==NULL)
 	{
 		perror("Unable to read the GPIO file!");
-		return -1;
+		free(value);
+		return NULL;
 	}
 	else
 	{
 		printf("File accessed to read : %s \n", fullPath);
 	}
 
-	while((tempChar = fgetc(fp))!='\n')
+
+	 if( fgets (value, 10, fp)!=NULL )
+	 {
+		 puts(value);
+	 }
+
+
+	if(fclose(fp)!=0)
 	{
-	  *(buffer++)=tempChar;
+		perror("Error while closing file stream !");
+		free(value);
+		return NULL;
 	}
 
-	int returnValue=fclose(fp);
-	if(returnValue!=0)
-		perror("Error while closing file stream !");
-
-	return returnValue;
-
+	return value;
 
 }
 
-void exportGPIO(int GPIONum)
-{
-	//write to file
-}
-
-void unexportGPIO(int intGPIONum)
-{
-	///write to file
-}
-
-void setGPIODirection(char* direction)
-{
-	///write to file
-}
-
-void setValue(int value)
-{
-	//write to file
-}
 
